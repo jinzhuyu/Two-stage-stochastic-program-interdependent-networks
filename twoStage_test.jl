@@ -22,7 +22,6 @@ arcs_data = CSV.read("C:\\Users\\yuj5\\Dropbox\\1-two-stage-stochastic-program-i
 # β_n = CSV.read("C:\\Users\\yuj5\\Dropbox\\1-two-stage-stochastic-program-interdependent-networks\\is_damage_nodes_test.csv")
 # β_a = CSV.read("C:\\Users\\yuj5\\Dropbox\\1-two-stage-stochastic-program-interdependent-networks\\is_damage_arcs_test.csv")
 
-
 round.(Int64, arcs_data.start_node)
 round.(Int64, arcs_data.end_node)
 
@@ -168,13 +167,13 @@ time_limit = 3600*12    # 12 hours
 # extsv_model = Model(solver = CplexSolver(CPX_PARAM_TILIM = UB_time, CPX_PARAM_EPGAP = 1e-3))
 extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 
-# first-stage
-@variable(extsv_model, x_n[i in nodes], Bin)
-@variable(extsv_model, x_a[arc in arcs], Bin)
+# # first-stage
+# @variable(extsv_model, x_n[i in nodes], Bin)
+# @variable(extsv_model, x_a[arc in arcs], Bin)
 
-# limited cost
-@constraint(extsv_model, cost1, sum(x_n[i]*ch_n_dict[i] for i in nodes) +
-                                sum(x_a[arc]*ch_a_dict[arc] for arc in arcs) <= ρ_h*B)
+# # limited cost
+# @constraint(extsv_model, cost1, sum(x_n[i]*ch_n_dict[i] for i in nodes) +
+#                                 sum(x_a[arc]*ch_a_dict[arc] for arc in arcs) <= ρ_h*B)
 
 # sum(ch_n_dict[i] for i in nodes) + sum(ch_a_dict[arc] for arc in arcs) >= ρ_h*B # true
 
