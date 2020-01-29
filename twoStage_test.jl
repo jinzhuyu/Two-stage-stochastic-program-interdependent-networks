@@ -250,6 +250,7 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 
 # println(f_sol[(j, ii), :, 1] for (j,ii) in arcs if ii == 22)
 
+
 # operational constraints
 @constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
     f[arc, t, ω] <= u_a_dict[arc]*z_a[arc, t, ω])
