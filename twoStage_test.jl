@@ -2,6 +2,8 @@
 # ctrl-j + ctrl-k to start a new session
 clearconsole()
 
+# xxxxx
+
 # import packages
 using JuMP, Gurobi
 using Distributions, GLPKMathProgInterface
@@ -310,7 +312,6 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 @constraint(extsv_model, [node in nodes, ω in Ω], z_n[node, 0, ω] ==1)
 @constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] ==1)
 
-#111
 # β_a_index_dict[(104,105)]
 
 # anonymous constraint container by dropping the name
