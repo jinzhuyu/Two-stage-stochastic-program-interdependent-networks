@@ -13,12 +13,12 @@ using CSV, DataFrames, Plots
 # import LightGraphs
 
 # # load data
-nodes_data = CSV.read("C:\\Users\\yuj5\\Dropbox\\Two-stage stochastic programming for pre post recovery of interdependent networks\\nodes_data_test.csv")
-arcs_data = CSV.read("C:\\Users\\yuj5\\Dropbox\\Two-stage stochastic programming for pre post recovery of interdependent networks\\arcs_data_test.csv")
+nodes_data = CSV.read("C:\\Users\\yuj5\\Dropbox\\1-two-stage-stochastic-program-interdependent-networks\\nodes_data_test.csv")
+arcs_data = CSV.read("C:\\Users\\yuj5\\Dropbox\\1-two-stage-stochastic-program-interdependent-networks\\arcs_data_test.csv")
 
-#  damage state
-β_n = CSV.read("C:\\Users\\yuj5\\Dropbox\\Two-stage stochastic programming for pre post recovery of interdependent networks\\is_damage_nodes_test.csv")
-β_a = CSV.read("C:\\Users\\yuj5\\Dropbox\\Two-stage stochastic programming for pre post recovery of interdependent networks\\is_damage_arcs_test.csv")
+# #  damage state
+# β_n = CSV.read("C:\\Users\\yuj5\\Dropbox\\1-two-stage-stochastic-program-interdependent-networks\\is_damage_nodes_test.csv")
+# β_a = CSV.read("C:\\Users\\yuj5\\Dropbox\\1-two-stage-stochastic-program-interdependent-networks\\is_damage_arcs_test.csv")
 
 
 round.(Int64, arcs_data.start_node)
@@ -29,7 +29,7 @@ round.(Int64, arcs_data.end_node)
 #                                 'end_node_long', 'length'))
 num_nodes = nrow(nodes_data)
 num_arcs = nrow(arcs_data)
-num_samples = ncol(β_n) - 99
+num_samples = 1
 
 # scalar parameters
 # proportion of budget for hardenning activities
