@@ -36,7 +36,7 @@ num_samples = 1
 # proportion of budget for hardenning activities
 ρ_h = 0.30 #0.2
 # total budget
-B = 5e20
+B = 5e5
 
 
 # cost of slack
@@ -168,12 +168,12 @@ time_limit = 3600*12    # 12 hours
 extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 
 # # first-stage
-# @variable(extsv_model, x_n[i in nodes], Bin)
-# @variable(extsv_model, x_a[arc in arcs], Bin)
+@variable(extsv_model, x_n[i in nodes], Bin)
+@variable(extsv_model, x_a[arc in arcs], Bin)
 
 # # limited cost
-# @constraint(extsv_model, cost1, sum(x_n[i]*ch_n_dict[i] for i in nodes) +
-#                                 sum(x_a[arc]*ch_a_dict[arc] for arc in arcs) <= ρ_h*B)
+@constraint(extsv_model, cost1, sum(x_n[i]*ch_n_dict[i] for i in nodes) +
+                                sum(x_a[arc]*ch_a_dict[arc] for arc in arcs) <= ρ_h*B)
 
 # sum(ch_n_dict[i] for i in nodes) + sum(ch_a_dict[arc] for arc in arcs) >= ρ_h*B # true
 
@@ -220,14 +220,12 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 
 # constraints
 # cost of restoration is upbounded
-# for ω in Ω
-# @constraint(extsv_model, cost2[ω in Ω],
-#     sum(csn_unit*s[i, t, ω] for i in demand_nodes, t in 1:t_max) +
-#     sum(cf_unit*f[arc, t, ω] for arc in arcs, t in 1:t_max) +
-#     sum(cr_n_dict[i]*v_n[i, t, ω] for i in nodes, t in 1:t_max) +
-#     sum(cr_a_dict[arc]*v_a[arc, t, ω] for arc in arcs, t in 1:t_max) <=
-#     (1 - ρ_h)*B)
-# end
+@constraint(extsv_model, cost2[ω in Ω],
+    sum(csn_unit*s[i, t, ω] for i in demand_nodes, t in 1:t_max) +
+    sum(cf_unit*f[arc, t, ω] for arc in arcs, t in 1:t_max) +
+    sum(cr_n_dict[i]*v_n[i, t, ω] for i in nodes, t in 1:t_max) +
+    sum(cr_a_dict[arc]*v_a[arc, t, ω] for arc in arcs, t in 1:t_max) <=
+    (1 - ρ_h)*B)
 
 # sum(csn_unit*s_sol[i, t, 1] for i in demand_nodes, t in 1:t_max)
 # (1 - ρ_h)*B
@@ -255,7 +253,6 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
     f[arc, t, ω] <= u_a_dict[arc]*z_a[arc, t, ω])
 @constraint(extsv_model, [(i, j) in arcs, t in 1:t_max, ω in Ω],
     f[(i, j), t, ω] <= u_a_dict[(i, j)]*z_n[i, t, ω])  # u-a instead of u_n
-
 # end node of arcs have to work before the arcs can be functioning
 @constraint(extsv_model, [(i, j) in arcs, t in 1:t_max, ω in Ω],
     f[(i, j), t, ω] <= u_a_dict[(i, j)]*z_n[j, t, ω])  # u-a instead of u_n
@@ -297,10 +294,10 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 
 
 
-# @constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
-#     z_n[i, t-1, ω] <= z_n[i, t, ω])
-# @constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
-#     z_a[arc, t-1, ω] <= z_a[arc, t, ω])
+@constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
+    z_n[i, t-1, ω] <= z_n[i, t, ω])
+@constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
+    z_a[arc, t-1, ω] <= z_a[arc, t, ω])
 
 # impact of first stage decision variables
 # @constraint(extsv_model, [node in nodes, ω in Ω], z_n[node, 0, ω] <= β_n[β_n_index_dict[node], ω] + x_n[node])
@@ -312,8 +309,8 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 # @constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] + β_a[arc, ω] ==1)
 
 # suppose that all components are damaged (not functioning) at t=0
-# @constraint(extsv_model, [node in nodes, ω in Ω], z_n[node, 0, ω] ==0)
-# @constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] ==0)
+@constraint(extsv_model, [node in nodes, ω in Ω], z_n[node, 0, ω] ==0)
+@constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] ==0)
 
 # anonymous constraint container by dropping the name
 # ref.: https://github.com/JuliaOpt/JuMP.jl/blob/master/docs/src/constraints.md
