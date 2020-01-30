@@ -46,9 +46,9 @@ cf_unit = 1e2
 
 # time-dependent weight of networks
 t_max=20
-wt1=collect(0.8:-(0.8 - 0.5)/t_max:0.5)
-wt2=collect((1 - 0.8):(0.8 - 0.5)/t_max:0.5)
-wt = hcat(wt1, wt2)
+# wt1=collect(0.8:-(0.8 - 0.5)/t_max:0.5)
+# wt2=collect((1 - 0.8):(0.8 - 0.5)/t_max:0.5)
+# wt = hcat(wt1, wt2)
 
 # probability of each scenario
 prob_scen=1/num_samples
@@ -216,17 +216,17 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 # @objective(extsv_model, Max, sum(w[, t]*(sum(f[(j, ii), t]*is_demand_dict[i]
 #   *α[i, t] for (j, ii) in arcs if ii == i)/orig_demand_total)  for t in 1:t_max))
 @objective(extsv_model, Min,
-    prob_scen*sum(wt1[t]*s[i, t, ω] for i in demand_nodes, t in 1:t_max, ω in Ω))
+    prob_scen*sum(s[i, t, ω] for i in demand_nodes, t in 1:t_max, ω in Ω))
 
 # constraints
 # cost of restoration is upbounded
 # for ω in Ω
-@constraint(extsv_model, cost2[ω in Ω],
-    sum(csn_unit*s[i, t, ω] for i in demand_nodes, t in 1:t_max) +
-    sum(cf_unit*f[arc, t, ω] for arc in arcs, t in 1:t_max) +
-    sum(cr_n_dict[i]*v_n[i, t, ω] for i in nodes, t in 1:t_max) +
-    sum(cr_a_dict[arc]*v_a[arc, t, ω] for arc in arcs, t in 1:t_max) <=
-    (1 - ρ_h)*B)
+# @constraint(extsv_model, cost2[ω in Ω],
+#     sum(csn_unit*s[i, t, ω] for i in demand_nodes, t in 1:t_max) +
+#     sum(cf_unit*f[arc, t, ω] for arc in arcs, t in 1:t_max) +
+#     sum(cr_n_dict[i]*v_n[i, t, ω] for i in nodes, t in 1:t_max) +
+#     sum(cr_a_dict[arc]*v_a[arc, t, ω] for arc in arcs, t in 1:t_max) <=
+#     (1 - ρ_h)*B)
 # end
 
 # sum(csn_unit*s_sol[i, t, 1] for i in demand_nodes, t in 1:t_max)
@@ -254,9 +254,11 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 @constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
     f[arc, t, ω] <= u_a_dict[arc]*z_a[arc, t, ω])
 @constraint(extsv_model, [(i, j) in arcs, t in 1:t_max, ω in Ω],
-    f[(i, j), t, ω] <= u_n_dict[i]*z_n[i, t, ω])
+    f[(i, j), t, ω] <= u_a_dict[(i, j)]*z_n[i, t, ω])  # u-a instead of u_n
+
+# end node of arcs have to work before the arcs can be functioning
 @constraint(extsv_model, [(i, j) in arcs, t in 1:t_max, ω in Ω],
-    f[(i, j), t, ω] <= u_n_dict[i]*z_n[j, t, ω])
+    f[(i, j), t, ω] <= u_a_dict[(i, j)]*z_n[j, t, ω])  # u-a instead of u_n
 
 # # additional: the start node and end node of any functional arc should be functional
 # @constraint(extsv_model, [(i, j) in arcs, t in 1:t_max, ω in Ω],
@@ -266,37 +268,39 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 # physical dependency: node dependent on link
 # @constraint(extsv_model, [(i, j) in inter_arcs, t in 1:t_max], z_a[j, t] <= z_n[i, t, ω])
 
-# scheduling constraints
-# repair crew work at the same component until the component is restored.
-@constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
-    v_n[i,t, ω] == sum(y_n[i, tt, ω] for tt = max(1,t-dr_n_dict[i]+1):t))
-@constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
-    v_a[arc,t, ω] == sum(y_a[arc, tt, ω] for tt = max(1, t-dr_a_dict[arc]+1):t))
+# # scheduling constraints
+# # repair crew work at the same component until the component is restored.
+# @constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
+#     v_n[i,t, ω] == sum(y_n[i, tt, ω] for tt = max(1,t-dr_n_dict[i]+1):t))
+# @constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
+#     v_a[arc,t, ω] == sum(y_a[arc, tt, ω] for tt = max(1, t-dr_a_dict[arc]+1):t))
+#
+# # number of repair crew is upbounded at any time period
+# # Note: to do - modify it to differentiate between repair crews for different networks
+#
+# @constraint(extsv_model, crew_bound[t in 1:t_max, ω in Ω],
+#     sum(v_n[i, t, ω] for i in nodes) + sum(v_a[arc, t, ω] for arc in arcs) <= sum(N_R))
+#                             # sum(N[m]) m in network_index)
+#
+#
+# # components won't be restored until repair crews start to work at it at t-dr
+# @constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
+#     w_n[i, t, ω] == sum(y_n[i, tt, ω] for tt = 1:min(t_max, t-dr_n_dict[i])))
+# @constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
+#     w_a[arc, t, ω] == sum(y_a[arc, tt, ω] for tt = 1:min(t_max, t-dr_a_dict[arc])))
+#
+# # components will not be operational until restored
+# @constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
+#     z_n[i, t, ω] <= z_n[i, t-1, ω] + w_n[i, t, ω])
+# @constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
+#     z_a[arc, t, ω] <= z_a[arc, t-1, ω] + w_a[arc, t, ω])
 
-# number of repair crew is upbounded at any time period
-# Note: to do - modify it to differentiate between repair crews for different networks
-
-@constraint(extsv_model, crew_bound[t in 1:t_max, ω in Ω],
-    sum(v_n[i, t, ω] for i in nodes) + sum(v_a[arc, t, ω] for arc in arcs) <= sum(N_R))
-                            # sum(N[m]) m in network_index)
 
 
-# components won't be restored until repair crews start to work at it at t-dr
-@constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
-    w_n[i, t, ω] == sum(y_n[i, tt, ω] for tt = 1:min(t_max, t-dr_n_dict[i])))
-@constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
-    w_a[arc, t, ω] == sum(y_a[arc, tt, ω] for tt = 1:min(t_max, t-dr_a_dict[arc])))
-
-# components will not be operational until restored
-@constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
-    z_n[i, t, ω] <= z_n[i, t-1, ω] + w_n[i, t, ω])
-@constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
-    z_a[arc, t, ω] <= z_a[arc, t-1, ω] + w_a[arc, t, ω])
-
-@constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
-    z_n[i, t-1, ω] <= z_n[i, t, ω])
-@constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
-    z_a[arc, t-1, ω] <= z_a[arc, t, ω])
+# @constraint(extsv_model, [i in nodes, t in 1:t_max, ω in Ω],
+#     z_n[i, t-1, ω] <= z_n[i, t, ω])
+# @constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
+#     z_a[arc, t-1, ω] <= z_a[arc, t, ω])
 
 # impact of first stage decision variables
 # @constraint(extsv_model, [node in nodes, ω in Ω], z_n[node, 0, ω] <= β_n[β_n_index_dict[node], ω] + x_n[node])
@@ -308,8 +312,8 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 # @constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] + β_a[arc, ω] ==1)
 
 # suppose that all components are damaged (not functioning) at t=0
-@constraint(extsv_model, [node in nodes, ω in Ω], z_n[node, 0, ω] ==0)
-@constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] ==0)
+# @constraint(extsv_model, [node in nodes, ω in Ω], z_n[node, 0, ω] ==0)
+# @constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] ==0)
 
 # anonymous constraint container by dropping the name
 # ref.: https://github.com/JuliaOpt/JuMP.jl/blob/master/docs/src/constraints.md
@@ -329,9 +333,9 @@ t_1 = time_ns()
 # println("The solution time is: ", t_solve_s, " seconds.")
 
 # Optimal solutions
-println("Optimal Solutions:")
+# println("Optimal Solutions:")
 println("Status = $status")
-println("Optimal Objective Function value: ", getobjectivevalue(extsv_model))
+println("Optimal objective Function value: ", getobjectivevalue(extsv_model))
 
 # slack
 s_sol = getvalue(s)
@@ -342,24 +346,24 @@ println("\nSlack:\n", s_sol)
 f_sol = getvalue(f)
 println("Flow on arcs:\n", f_sol)
 
-# demand node:7,8
-ii = 8
-tt = t_max
-println(f_sol[(5,ii),tt,1]+f_sol[(6,ii),tt,1])
-println(sum(f_sol[(j, ii), tt, 1] if (j, ii) in arcs for j in nodes_id))
-println(f_sol[(i,j), 1, 1] for (i,j) in arcs)
+# # demand node:7,8
+# ii = 8
+# tt = t_max
+# println(f_sol[(5,ii),tt,1]+f_sol[(6,ii),tt,1])
+# println(sum(f_sol[(j, ii), tt, 1] if (j, ii) in arcs for j in nodes_id))
+# println(f_sol[(i,j), 1, 1] for (i,j) in arcs)
 
-# supply node:1,2
-node_sup =1
-println(f_sol[(node_sup,4),tt,1]+f_sol[(node_sup,5),tt,1])
+# # supply node:1,2
+# node_sup =1
+# println(f_sol[(node_sup,4),tt,1]+f_sol[(node_sup,5),tt,1])
 
-y_n_sol = getvalue(y_n)
-println("Scheduling of crews at nodes:\n", y_n_sol)
+# y_n_sol = getvalue(y_n)
+# println("Scheduling of crews at nodes:\n", y_n_sol)
 
 z_n_sol = getvalue(z_n)
 println(z_n_sol)
 
-w_n_sol = getvalue(w_n)
-println("Node repaired by time:\n", w_n_sol)
-
-println("Supply:\n", getvalue(q))
+# w_n_sol = getvalue(w_n)
+# println("Node repaired by time:\n", w_n_sol)
+#
+# println("Supply:\n", getvalue(q))
