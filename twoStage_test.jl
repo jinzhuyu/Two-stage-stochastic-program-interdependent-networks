@@ -250,7 +250,6 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 
 # println(f_sol[(j, ii), :, 1] for (j,ii) in arcs if ii == 22)
 
-
 # operational constraints
 @constraint(extsv_model, [arc in arcs, t in 1:t_max, ω in Ω],
     f[arc, t, ω] <= u_a_dict[arc]*z_a[arc, t, ω])
@@ -309,10 +308,8 @@ extsv_model = Model(solver=GurobiSolver(TimeLimit = time_limit))
 # @constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] + β_a[arc, ω] ==1)
 
 # suppose that all components are damaged (not functioning) at t=0
-@constraint(extsv_model, [node in nodes, ω in Ω], z_n[node, 0, ω] ==1)
-@constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] ==1)
-
-# β_a_index_dict[(104,105)]
+@constraint(extsv_model, [node in nodes, ω in Ω], z_n[node, 0, ω] ==0)
+@constraint(extsv_model, [arc in arcs, ω in Ω], z_a[arc, 0, ω] ==0)
 
 # anonymous constraint container by dropping the name
 # ref.: https://github.com/JuliaOpt/JuMP.jl/blob/master/docs/src/constraints.md
@@ -331,10 +328,9 @@ t_1 = time_ns()
 # t_solve_s = round((t_1 - t_0)*1e-9, digits = 4)
 # println("The solution time is: ", t_solve_s, " seconds.")
 
-# Printing the optimal solutions
+# Optimal solutions
 println("Optimal Solutions:")
 println("Status = $status")
-
 println("Optimal Objective Function value: ", getobjectivevalue(extsv_model))
 
 # slack
@@ -350,13 +346,10 @@ println("Flow on arcs:\n", f_sol)
 ii = 8
 tt = t_max
 println(f_sol[(5,ii),tt,1]+f_sol[(6,ii),tt,1])
-# the result is 90, = original demand, so slack= 0
 println(sum(f_sol[(j, ii), tt, 1] if (j, ii) in arcs for j in nodes_id))
-
 println(f_sol[(i,j), 1, 1] for (i,j) in arcs)
 
 # supply node:1,2
-
 node_sup =1
 println(f_sol[(node_sup,4),tt,1]+f_sol[(node_sup,5),tt,1])
 
@@ -365,8 +358,6 @@ println("Scheduling of crews at nodes:\n", y_n_sol)
 
 z_n_sol = getvalue(z_n)
 println(z_n_sol)
-
-println(getvalue(z_a))
 
 w_n_sol = getvalue(w_n)
 println("Node repaired by time:\n", w_n_sol)
